@@ -25,3 +25,14 @@ public:
 	static void DrawVLine(uint8_t x, int8_t y1, int8_t y2, uint8_t pattern);
 	static void DrawBackground();
 };
+
+class PlatformNet
+{
+public:
+	static bool IsAvailable();
+	static bool IsAvailableForWrite();
+	static uint8_t Read();
+	static uint8_t Peek();
+	static void Write(uint8_t data);
+	static char GenerateRandomNetworkToken();
+};

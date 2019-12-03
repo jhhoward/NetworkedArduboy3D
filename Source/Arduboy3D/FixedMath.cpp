@@ -12,7 +12,8 @@ uint16_t RandomOld()
 	return randVal - 1;
 }
 
-static uint16_t xs = 1;
+uint16_t xs = 1;
+static uint16_t vxs = 1;
 
 uint16_t Random()
 {
@@ -20,6 +21,14 @@ uint16_t Random()
 	xs ^= xs >> 9;
 	xs ^= xs << 8;
 	return xs;
+}
+
+uint16_t VisualRandom()
+{
+	vxs ^= vxs << 7;
+	vxs ^= vxs >> 9;
+	vxs ^= vxs << 8;
+	return vxs;
 }
 
 void SeedRandom(uint16_t seed)

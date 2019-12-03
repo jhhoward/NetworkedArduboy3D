@@ -565,8 +565,9 @@ void Renderer::DrawFloorLine(int16_t x1, int16_t y1, int16_t x2, int16_t y2)
 void Renderer::DrawFloorLines()
 {
 	constexpr int size = 10;
-	int16_t baseX = (Game::player.x - CELL_SIZE * size / 2) & 0xff00;
-	int16_t baseY = (Game::player.y - CELL_SIZE * size / 2) & 0xff00;
+	Player& player = Game::GetLocalPlayer();
+	int16_t baseX = (player.x - CELL_SIZE * size / 2) & 0xff00;
+	int16_t baseY = (player.y - CELL_SIZE * size / 2) & 0xff00;
 	
 	for(int n = 0; n < 10; n++)
 	{
@@ -1214,7 +1215,7 @@ void Renderer::DrawWeapon()
 {
 	int x = DISPLAY_WIDTH / 2 + 22 + camera.tilt / 4;
 	int y = DISPLAY_HEIGHT - 21 - camera.bob;
-	uint8_t reloadTime = Game::player.reloadTime;
+	uint8_t reloadTime = Game::GetLocalPlayer().reloadTime;
 	
 	if(reloadTime > 0)
 	{
@@ -1302,11 +1303,12 @@ void Renderer::DrawHUD()
 	constexpr uint8_t barWidth = 40;
 	uint8_t* screenBuffer = Platform::GetScreenBuffer();
 	uint8_t* screenPtr = screenBuffer + DISPLAY_WIDTH * 6;
+	Player& player = Game::GetLocalPlayer();
 
-	DrawBar(screenBuffer + DISPLAY_WIDTH * 7, heartSpriteData, Game::player.hp, Game::player.maxHP);
-	DrawBar(screenBuffer + DISPLAY_WIDTH * 6, manaSpriteData, Game::player.mana, Game::player.maxMana);
+	DrawBar(screenBuffer + DISPLAY_WIDTH * 7, heartSpriteData, player.hp, player.maxHP);
+	DrawBar(screenBuffer + DISPLAY_WIDTH * 6, manaSpriteData, player.mana, player.maxMana);
 
-	if(Game::player.damageTime > 0)
+	if(player.damageTime > 0)
 		DrawDamageIndicator();
 
 	if (Game::displayMessage)
@@ -1339,10 +1341,22 @@ void Renderer::Render()
 	DrawCells();
 	//DrawFloorLines();
 
+	{
+		Player& localPlayer = Game::GetLocalPlayer();
+		Player& remotePlayer = Game::GetRemotePlayer();
+		uint8_t angleDiff = localPlayer.angle - remotePlayer.angle;
+		if (angleDiff > 128)
+			angleDiff = 255 - angleDiff;
+
+		int offset = angleDiff >= 64 ? 0 : 32;
+		Renderer::DrawObject(playerSpriteData + offset, remotePlayer.x, remotePlayer.y, 96, AnchorType::Floor, false);
+	}
+
 	EnemyManager::Draw();
 	ProjectileManager::Draw();
 	ParticleSystemManager::Draw();
-	
+
+
 	RenderQueuedDrawables();
 	
 	DrawWeapon();

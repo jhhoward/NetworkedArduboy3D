@@ -12,6 +12,7 @@ enum class EnemyType : uint8_t
 	Bat,
 	Spider,
 	NumEnemyTypes,
+	Player,
 	None = NumEnemyTypes
 };
 
@@ -55,7 +56,7 @@ public:
 	void Init(EnemyType type, int16_t x, int16_t y);
 	void Tick();
 	bool IsValid() const { return type != EnemyType::None; }
-	void Damage(uint8_t amount);
+	void Damage(Entity* source, uint8_t amount);
 	void Clear() { type = EnemyType::None; }
 	const EnemyArchetype* GetArchetype() const;
 	EnemyState GetState() const { return state; }
@@ -63,6 +64,8 @@ public:
 
 private:
 	static const EnemyArchetype archetypes[(int)EnemyType::NumEnemyTypes];
+
+	bool CanSeePlayer(class Player& player) const;
 
 	bool ShouldFireProjectile() const;
 	bool FireProjectile(uint8_t angle);
@@ -72,12 +75,13 @@ private:
 	void PickNewTargetCell();
 	bool TryPickCells(int8_t deltaX, int8_t deltaY);
 	bool TryPickCell(int8_t newX, int8_t newY);
-	uint8_t GetPlayerCellDistance() const;
+	uint8_t GetPlayerCellDistance(class Player& player) const;
 
 	EnemyType type : 3;
 	EnemyState state : 3;
 	uint8_t frameDelay : 2;
-	uint8_t hp;
+	uint8_t hp : 7;
+	uint8_t targetPlayer : 1;
 	uint8_t targetCellX, targetCellY;
 };
 

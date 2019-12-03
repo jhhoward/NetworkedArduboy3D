@@ -221,8 +221,8 @@ void Map::DrawMinimap()
 	constexpr uint8_t minimapHeight = 18;
 	constexpr uint8_t minimapX = 0; //DISPLAY_WIDTH / 2 - minimapWidth / 2;
 	constexpr uint8_t minimapY = 0; //DISPLAY_HEIGHT - minimapHeight;
-	uint8_t playerCellX = Game::player.x / CELL_SIZE;
-	uint8_t playerCellY = Game::player.y / CELL_SIZE;
+	uint8_t playerCellX = Game::GetLocalPlayer().x / CELL_SIZE;
+	uint8_t playerCellY = Game::GetLocalPlayer().y / CELL_SIZE;
 	uint8_t startCellX = playerCellX - minimapWidth / 2;
 	uint8_t startCellY = playerCellY - minimapHeight / 2;
 

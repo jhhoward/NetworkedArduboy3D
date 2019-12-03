@@ -1,3 +1,6 @@
+// Generated from Images/player.png
+constexpr uint8_t playerSpriteData_numFrames = 2;
+extern const uint16_t playerSpriteData[];
 // Generated from Images/enemy.png
 constexpr uint8_t skeletonSpriteData_numFrames = 2;
 extern const uint16_t skeletonSpriteData[];

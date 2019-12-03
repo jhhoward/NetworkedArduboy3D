@@ -10,7 +10,9 @@ public:
 	uint8_t life;
 	uint8_t ownerId;
 
-	static constexpr uint8_t playerOwnerId = 0xff;
+	static constexpr uint8_t player1OwnerId = 0xff;
+	static constexpr uint8_t player2OwnerId = 0xfe;
+	static uint8_t GetLocalPlayerOwnerId();
 
 	Entity* GetOwner() const;
 };

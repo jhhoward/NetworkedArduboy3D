@@ -131,6 +131,7 @@
     <ClCompile Include="..\..\Arduboy3D\Sounds.cpp" />
     <ClCompile Include="lodepng.cpp" />
     <ClCompile Include="WinMain.cpp" />
+    <ClCompile Include="WinNetwork.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Arduboy3D\Defines.h" />
@@ -151,6 +152,7 @@
     <ClInclude Include="..\..\Arduboy3D\Sounds.h" />
     <ClInclude Include="..\..\Arduboy3D\Textures.h" />
     <ClInclude Include="lodepng.h" />
+    <ClInclude Include="WinNetwork.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

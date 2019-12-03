@@ -15,6 +15,8 @@ public:
 	void TickGameOver();
 	void DrawGameOver();	
 	
+	void DrawEstablishingNetwork();
+
 	void ResetTimer();
 	
 	void FadeOut();

@@ -65,11 +65,11 @@ void ParticleSystem::Explode()
 {
 	for (Particle& p : particles)
 	{
-		p.x = (Random() & 31) - 16;
-		p.y = (Random() & 31) - 16;
+		p.x = (VisualRandom() & 31) - 16;
+		p.y = (VisualRandom() & 31) - 16;
 
-		p.velX = (Random() & 31) - 16;
-		p.velY = (Random() & 31) - 25;
+		p.velX = (VisualRandom() & 31) - 16;
+		p.velY = (VisualRandom() & 31) - 25;
 	}
 	
 	life = 22;

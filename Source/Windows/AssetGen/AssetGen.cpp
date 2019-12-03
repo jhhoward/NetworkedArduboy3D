@@ -440,6 +440,7 @@ int main(int argc, char* argv[])
 	dataFile.open(spriteDataHeaderOutputPath);
 	typeFile.open(spriteTypesHeaderOutputPath);
 	
+	EncodeSprite3D(typeFile, dataFile, "Images/player.png", "playerSpriteData");
 	EncodeSprite3D(typeFile, dataFile, "Images/enemy.png", "skeletonSpriteData");
 	EncodeSprite3D(typeFile, dataFile, "Images/mage.png", "mageSpriteData");
 //	EncodeSprite3D(typeFile, dataFile, "Images/skeleton.png", "skeletonSpriteData");

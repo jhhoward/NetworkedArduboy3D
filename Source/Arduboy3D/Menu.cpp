@@ -95,6 +95,27 @@ void Menu::DrawEnteringLevel()
 	Font::PrintInt(Game::floor, 3, 90, COLOUR_WHITE);
 }	
 
+void Menu::DrawEstablishingNetwork()
+{
+	Platform::FillScreen(COLOUR_BLACK);
+
+	if (!PlatformNet::IsAvailableForWrite())
+	{
+		Font::PrintString(PSTR("Connect to network"), 4, 30, COLOUR_WHITE);
+	}
+	else
+	{
+		if(Game::globalTickFrame & 8)
+			Font::PrintString(PSTR("Looking for player"), 4, 30, COLOUR_WHITE);
+	}
+
+	Font::PrintString(PSTR("CATACOMBS OF THE DAMNED"), 2, 18, COLOUR_WHITE);
+	Font::PrintString(PSTR("by @jameshhoward"), 7, 32, COLOUR_WHITE);
+	const uint16_t* torchSprite = Game::globalTickFrame & 4 ? torchSpriteData1 : torchSpriteData2;
+	Renderer::DrawScaled(torchSprite, 0, 10, 9, 255);
+	Renderer::DrawScaled(torchSprite, DISPLAY_WIDTH - 18, 10, 9, 255);
+}
+
 void Menu::TickGameOver()
 {
 	constexpr uint8_t minShowTime = 30;
@@ -233,7 +254,9 @@ void Menu::FadeOut()
 
 		if (fizzleFade == startValue)
 		{
-			Game::SwitchState(Game::State::GameOver);
+			//Game::SwitchState(Game::State::GameOver);
+			//Game::Respawn();
+			Game::StartGame();
 			return;
 		}
 	}

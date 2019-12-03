@@ -138,6 +138,7 @@ void Platform::FillScreen(uint8_t colour)
 }
 
 unsigned long lastTimingSample;
+unsigned long lastGoodTickTime;
 
 bool Platform::IsAudioEnabled()
 {
@@ -158,6 +159,37 @@ void Platform::ExpectLoadDelay()
 	lastTimingSample = millis();
 }
 
+bool PlatformNet::IsAvailable()
+{
+	return Serial.available();
+}
+
+bool PlatformNet::IsAvailableForWrite()
+{
+	return Serial.availableForWrite();
+}
+
+uint8_t PlatformNet::Read()
+{
+	return Serial.read();
+}
+
+uint8_t PlatformNet::Peek()
+{
+	return Serial.peek();
+}
+
+void PlatformNet::Write(uint8_t data)
+{
+	Serial.write(data);
+}
+
+char PlatformNet::GenerateRandomNetworkToken()
+{
+	return (char) arduboy.generateRandomSeed() | 1;
+}
+
+
 void setup()
 {
   arduboy.boot();
@@ -168,12 +200,13 @@ void setup()
 
   //arduboy.audio.off();
   
-  //Serial.begin(9600);
+  Serial.begin(9600);
 
 //  SeedRandom((uint16_t) arduboy.generateRandomSeed());
   Game::Init();
   
   lastTimingSample = millis();
+  lastGoodTickTime = millis();
 }
 
 void loop()
@@ -182,21 +215,40 @@ void loop()
   unsigned long timingSample = millis();
   tickAccum += (timingSample - lastTimingSample);
   lastTimingSample = timingSample;
-	
-#if DEV_MODE
+  
+/*#if DEV_MODE
   if(arduboy.nextFrameDEV())
 #else
   if(arduboy.nextFrame())
-#endif
+#endif*/
   {
 	constexpr int16_t frameDuration = 1000 / TARGET_FRAMERATE;
+	bool needsDraw = false;
+	
 	while(tickAccum > frameDuration)
 	{
-		Game::Tick();
-		tickAccum -= frameDuration;
+		if(Game::Tick())
+		{
+			needsDraw = true;
+			tickAccum -= frameDuration;
+			lastGoodTickTime = timingSample;
+		}
+		else 
+		{
+			break;
+		}
 	}
 	
-	Game::Draw();
+	if(needsDraw)
+	{
+		Game::Draw();
+	    arduboy.display(false);
+	}
+	else if((timingSample - lastGoodTickTime) > 5000)
+	{
+		void(* resetFunc) (void) = 0;
+		resetFunc();
+	}
     
     //Serial.write(arduboy.getBuffer(), 128 * 64 / 8);
 
@@ -211,7 +263,5 @@ void loop()
 	}
 	screenPtr[100] = 0;
 #endif
-	
-    arduboy.display(false);
   }
 }

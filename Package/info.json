@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
-  "title": "Catacombs of the damned!",
-  "description": "A first person shooter inspired by the Catacomb 3D series with randomly generated levels",
+  "title": "Network of the damned!",
+  "description": "2 player networked multiplayer version of Catacombs of the Damned!",
   "author": "James Howard",
   "version": "1.0",
   "date": "2019-07-04",
@@ -11,8 +11,8 @@
   "code": "",
   "art": "",
   "sound": "",
-  "url": "https://github.com/jhhoward/Arduboy3D",
-  "sourceUrl": "https://github.com/jhhoward/Arduboy3D",
+  "url": "https://github.com/jhhoward/NetworkedArduboy3D",
+  "sourceUrl": "https://github.com/jhhoward/NetworkedArduboy3D",
   "email": "",
   "companion": "",
   "banner": "banner.png",
@@ -28,7 +28,7 @@
   ],
   "binaries": [
     {
-      "title": "Catacombs of the damned!",
+      "title": "Network of the damned!",
       "filename": "Arduboy3D.hex",
       "device": "Arduboy"
     }

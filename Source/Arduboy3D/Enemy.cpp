@@ -74,9 +74,10 @@ void Enemy::Init(EnemyType initType, int16_t initX, int16_t initY)
 	targetCellX = x / CELL_SIZE;
 	targetCellY = y / CELL_SIZE;
 	hp = GetArchetype()->GetHP();
+	targetPlayer = 0;
 }
 
-void Enemy::Damage(uint8_t amount)
+void Enemy::Damage(Entity* source, uint8_t amount)
 {
 	if (amount >= hp)
 	{
@@ -91,6 +92,11 @@ void Enemy::Damage(uint8_t amount)
 		Platform::PlaySound(Sounds::Hit);
 		state = EnemyState::Stunned;
 		frameDelay = GetArchetype()->GetStunDuration();
+
+		if (source == &Game::players[0])
+			targetPlayer = 0;
+		if (source == &Game::players[1])
+			targetPlayer = 1;
 	}
 }
 
@@ -143,20 +149,26 @@ bool Enemy::TryPickCells(int8_t deltaX, int8_t deltaY)
 		|| TryPickCell(targetCellX + deltaX, targetCellY - deltaY);
 }
 
-uint8_t Enemy::GetPlayerCellDistance() const
+uint8_t Enemy::GetPlayerCellDistance(Player& player) const
 {
-	uint8_t dx = ABS(Game::player.x - x) / CELL_SIZE;
-	uint8_t dy = ABS(Game::player.y - y) / CELL_SIZE;
+	uint8_t dx = ABS(player.x - x) / CELL_SIZE;
+	uint8_t dy = ABS(player.y - y) / CELL_SIZE;
 	return dx > dy ? dx : dy;
 }
 
 void Enemy::PickNewTargetCell()
 {
-	int8_t deltaX = (int8_t) Clamp((Game::player.x / CELL_SIZE) - targetCellX, -1, 1);
-	int8_t deltaY = (int8_t) Clamp((Game::player.y / CELL_SIZE) - targetCellY, -1, 1);
+	int8_t deltaX = (int8_t) Clamp((Game::players[targetPlayer].x / CELL_SIZE) - targetCellX, -1, 1);
+	int8_t deltaY = (int8_t) Clamp((Game::players[targetPlayer].y / CELL_SIZE) - targetCellY, -1, 1);
 	uint8_t dodgeChance = (uint8_t) Random();
 
-	if (GetArchetype()->GetIsRanged() && GetPlayerCellDistance() < 3)
+	if (!CanSeePlayer(Game::players[targetPlayer]) && CanSeePlayer(Game::players[!targetPlayer]))
+	{
+		targetPlayer = !targetPlayer;
+	}
+
+
+	if (GetArchetype()->GetIsRanged() && GetPlayerCellDistance(Game::players[targetPlayer]) < 3)
 	{
 		deltaX = -deltaX;
 		deltaY = -deltaY;
@@ -226,12 +238,12 @@ bool Enemy::TryMove()
 	x += deltaX;
 	y += deltaY;
 
-	if(IsOverlappingEntity(Game::player))
+	if(IsOverlappingEntity(Game::players[targetPlayer]))
 	{
 		if (!GetArchetype()->GetIsRanged())
 		{
-			Game::player.Damage(GetArchetype()->GetAttackStrength());
-			if (Game::player.hp == 0)
+			Game::players[targetPlayer].Damage(GetArchetype()->GetAttackStrength());
+			if (Game::players[targetPlayer].hp == 0)
 			{
 				Game::stats.killedBy = type;
 			}
@@ -244,6 +256,7 @@ bool Enemy::TryMove()
 		y -= deltaY;
 		return false;
 	}
+	
 
 	if(x == targetX && y == targetY)
 	{
@@ -259,8 +272,8 @@ bool Enemy::FireProjectile(uint8_t angle)
 
 bool Enemy::TryFireProjectile()
 {
-	int8_t deltaX = (Game::player.x - x) / CELL_SIZE;
-	int8_t deltaY = (Game::player.y - y) / CELL_SIZE;
+	int8_t deltaX = (Game::players[targetPlayer].x - x) / CELL_SIZE;
+	int8_t deltaY = (Game::players[targetPlayer].y - y) / CELL_SIZE;
 
 	if (deltaX == 0)
 	{
@@ -312,10 +325,15 @@ bool Enemy::TryFireProjectile()
 
 bool Enemy::ShouldFireProjectile() const
 {
-	uint8_t distance = GetPlayerCellDistance();
+	uint8_t distance = GetPlayerCellDistance(Game::players[targetPlayer]);
 	uint8_t chance = 16 / (distance > 0 ? distance : 1);
 
-	return GetArchetype()->GetIsRanged() && (Random() & 0xff) < chance && Map::IsClearLine(x, y, Game::player.x, Game::player.y);
+	return GetArchetype()->GetIsRanged() && (Random() & 0xff) < chance && CanSeePlayer(Game::players[targetPlayer]);
+}
+
+bool Enemy::CanSeePlayer(Player& player) const
+{
+	return Map::IsClearLine(x, y, player.x, player.y);
 }
 
 void Enemy::Tick()
@@ -337,10 +355,15 @@ void Enemy::Tick()
 	switch (state)
 	{
 	case EnemyState::Idle:
-		if (Map::IsClearLine(x, y, Game::player.x, Game::player.y))
+		for(int n = 0; n < 2; n++)
 		{
-			Platform::PlaySound(Sounds::SpotPlayer);
-			state = EnemyState::Moving;
+			if (CanSeePlayer(Game::players[n]))
+			{
+				Platform::PlaySound(Sounds::SpotPlayer);
+				state = EnemyState::Moving;
+				targetPlayer = n;
+				break;
+			}
 		}
 		break;
 	case EnemyState::Moving:

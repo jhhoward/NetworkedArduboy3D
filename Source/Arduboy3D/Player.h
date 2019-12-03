@@ -28,10 +28,12 @@ public:
 
 	void Init();
 	void NextLevel();
-	void Tick();
+	void Tick(uint8_t input);
 	void Fire();
 	void Move(int16_t deltaX, int16_t deltaY);
 	bool CheckCollisions();
 	void Damage(uint8_t amount);
 	bool IsWorldColliding() const;
+
+	void ShowMessage(const char* message);
 };

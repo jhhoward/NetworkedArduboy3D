@@ -16,8 +16,10 @@ Projectile* ProjectileManager::FireProjectile(Entity* owner, int16_t x, int16_t 
 	{
 		if(p.life == 0)
 		{
-			if (owner == &Game::player)
-				p.ownerId = Projectile::playerOwnerId;
+			if (owner == &Game::players[0])
+				p.ownerId = Projectile::player1OwnerId;
+			else if (owner == &Game::players[1])
+				p.ownerId = Projectile::player2OwnerId;
 			else
 			{
 				for (uint8_t n = 0; n < EnemyManager::maxEnemies; n++)
@@ -43,8 +45,10 @@ Projectile* ProjectileManager::FireProjectile(Entity* owner, int16_t x, int16_t 
 
 Entity* Projectile::GetOwner() const
 {
-	if (ownerId == playerOwnerId)
-		return &Game::player;
+	if (ownerId == player1OwnerId)
+		return &Game::players[0];
+	else if (ownerId == player2OwnerId)
+		return &Game::players[1];
 	return &EnemyManager::enemies[ownerId];
 }
 
@@ -99,28 +103,46 @@ void ProjectileManager::Update()
 			}
 			else
 			{
-				if (owner == &Game::player)
+				uint8_t damageAmount = 0;
+				EnemyType ownerType;
+
+				if (owner == &Game::players[0] || owner == &Game::players[1])
 				{
+					ownerType = EnemyType::Player;
+					damageAmount = Player::attackStrength;
+
 					Enemy* overlappingEnemy = EnemyManager::GetOverlappingEnemy(p.x, p.y);
 					if (overlappingEnemy)
 					{
-						overlappingEnemy->Damage(Player::attackStrength);
-
+						overlappingEnemy->Damage(owner, damageAmount);
 						hitAnything = true;
 					}
 				}
-				else if(Game::player.IsOverlappingPoint(p.x, p.y))
+				else
 				{
 					const EnemyArchetype* enemyArchetype = ((Enemy*)owner)->GetArchetype();
+					ownerType = ((Enemy*)owner)->GetType();
 					if (enemyArchetype)
 					{
-						Game::player.Damage(enemyArchetype->GetAttackStrength());
-						if (Game::player.hp == 0)
+						damageAmount = enemyArchetype->GetAttackStrength();
+					}
+				}
+
+				if (!hitAnything)
+				{
+					for (int n = 0; n < 2; n++)
+					{
+						Player& player = Game::players[n];
+						if (owner != &player && player.IsOverlappingPoint(p.x, p.y))
 						{
-							Game::stats.killedBy = ((Enemy*)owner)->GetType();
+							player.Damage(damageAmount);
+							if (player.hp == 0)
+							{
+								Game::stats.killedBy = ownerType;
+							}
+							hitAnything = true;
 						}
 					}
-					hitAnything = true;
 				}
 			}
 
@@ -147,7 +169,12 @@ void ProjectileManager::Draw()
 	{
 		if (p.life > 0)
 		{
-			Renderer::DrawObject(p.ownerId == Projectile::playerOwnerId ? projectileSpriteData : enemyProjectileSpriteData, p.x, p.y, 32, AnchorType::BelowCenter);
+			Renderer::DrawObject(p.ownerId == Projectile::GetLocalPlayerOwnerId() ? projectileSpriteData : enemyProjectileSpriteData, p.x, p.y, 32, AnchorType::BelowCenter);
 		}
 	}
+}
+
+uint8_t Projectile::GetLocalPlayerOwnerId()
+{
+	return Game::localPlayerId ? player2OwnerId : player1OwnerId;
 }

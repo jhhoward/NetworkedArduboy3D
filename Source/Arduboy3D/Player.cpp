@@ -25,6 +25,10 @@ void Player::NextLevel()
 {
 	x = CELL_SIZE * 1 + CELL_SIZE / 2;
 	y = CELL_SIZE * 1 + CELL_SIZE / 2;
+	if (this == &Game::players[1])
+	{
+		x += CELL_SIZE;
+	}
 	angle = FIXED_ANGLE_45;
 	mana = maxMana;
 	damageTime = 0;
@@ -51,9 +55,8 @@ void Player::Fire()
 	}
 }
 
-void Player::Tick()
+void Player::Tick(uint8_t input)
 {
-	uint8_t input = Platform::GetInput();
 	int8_t turnDelta = 0;
 	int8_t targetTilt = 0;
 	int8_t moveDelta = 0;
@@ -114,63 +117,66 @@ void Player::Tick()
 		moveDelta--;
 	}
 
-	static int tiltTimer = 0;
-	tiltTimer++;
-	if (moveDelta && USE_ROTATE_BOB)
+	if (&Game::GetLocalPlayer() == this)
 	{
-		targetTilt = (int8_t)(FixedSin(tiltTimer * 10) / 32);
-	}
-	else
-	{
-		targetTilt = 0;
-	}
-
-	targetTilt += angularVelocity * ROTATE_TILT;
-	targetTilt += strafeDelta * STRAFE_TILT;
-	int8_t targetBob = moveDelta || strafeDelta ? FixedSin(tiltTimer * 10) / 128 : 0;
-
-	if (shakeTime > 0)
-	{
-		shakeTime--;
-		targetBob += (Random() & 3) - 1;
-		targetTilt += (Random() & 31) - 16;
-	}
-
-	constexpr int tiltRate = 6;
-
-	if (Renderer::camera.tilt < targetTilt)
-	{
-		Renderer::camera.tilt += tiltRate;
-		if (Renderer::camera.tilt > targetTilt)
+		static int tiltTimer = 0;
+		tiltTimer++;
+		if (moveDelta && USE_ROTATE_BOB)
 		{
-			Renderer::camera.tilt = targetTilt;
+			targetTilt = (int8_t)(FixedSin(tiltTimer * 10) / 32);
 		}
-	}
-	else if (Renderer::camera.tilt > targetTilt)
-	{
-		Renderer::camera.tilt -= tiltRate;
+		else
+		{
+			targetTilt = 0;
+		}
+
+		targetTilt += angularVelocity * ROTATE_TILT;
+		targetTilt += strafeDelta * STRAFE_TILT;
+		int8_t targetBob = moveDelta || strafeDelta ? FixedSin(tiltTimer * 10) / 128 : 0;
+
+		if (shakeTime > 0)
+		{
+			shakeTime--;
+			targetBob += (VisualRandom() & 3) - 1;
+			targetTilt += (VisualRandom() & 31) - 16;
+		}
+
+		constexpr int tiltRate = 6;
+
 		if (Renderer::camera.tilt < targetTilt)
 		{
-			Renderer::camera.tilt = targetTilt;
+			Renderer::camera.tilt += tiltRate;
+			if (Renderer::camera.tilt > targetTilt)
+			{
+				Renderer::camera.tilt = targetTilt;
+			}
 		}
-	}
-
-	constexpr int bobRate = 3;
-
-	if (Renderer::camera.bob < targetBob)
-	{
-		Renderer::camera.bob += bobRate;
-		if (Renderer::camera.bob > targetBob)
+		else if (Renderer::camera.tilt > targetTilt)
 		{
-			Renderer::camera.bob = targetBob;
+			Renderer::camera.tilt -= tiltRate;
+			if (Renderer::camera.tilt < targetTilt)
+			{
+				Renderer::camera.tilt = targetTilt;
+			}
 		}
-	}
-	else if (Renderer::camera.bob > targetBob)
-	{
-		Renderer::camera.bob -= bobRate;
+
+		constexpr int bobRate = 3;
+
 		if (Renderer::camera.bob < targetBob)
 		{
-			Renderer::camera.bob = targetBob;
+			Renderer::camera.bob += bobRate;
+			if (Renderer::camera.bob > targetBob)
+			{
+				Renderer::camera.bob = targetBob;
+			}
+		}
+		else if (Renderer::camera.bob > targetBob)
+		{
+			Renderer::camera.bob -= bobRate;
+			if (Renderer::camera.bob < targetBob)
+			{
+				Renderer::camera.bob = targetBob;
+			}
 		}
 	}
 
@@ -214,27 +220,35 @@ void Player::Tick()
 				hp += potionStrength;
 			Map::SetCell(cellX, cellY, CellType::Empty);
 			Platform::PlaySound(Sounds::Pickup);
-			Game::ShowMessage(PSTR("Drank a potion of healing"));
+			ShowMessage(PSTR("Drank a potion of healing"));
 		}
 		break;
 	case CellType::Coins:
 		Map::SetCell(cellX, cellY, CellType::Empty);
 		Platform::PlaySound(Sounds::Pickup);
-		Game::ShowMessage(PSTR("Found some gold coins"));
+		ShowMessage(PSTR("Found some gold coins"));
 		Game::stats.coinsCollected++;
 		break;
 	case CellType::Crown:
 		Map::SetCell(cellX, cellY, CellType::Empty);
 		Platform::PlaySound(Sounds::Pickup);
-		Game::ShowMessage(PSTR("Found a jewel encrusted crown"));
+		ShowMessage(PSTR("Found a jewel encrusted crown"));
 		Game::stats.crownsCollected++;
 		break;
 	case CellType::Scroll:
 		Map::SetCell(cellX, cellY, CellType::Empty);
 		Platform::PlaySound(Sounds::Pickup);
-		Game::ShowMessage(PSTR("Found an ancient scroll"));
+		ShowMessage(PSTR("Found an ancient scroll"));
 		Game::stats.scrollsCollected++;
 		break;
+	}
+}
+
+void Player::ShowMessage(const char* message)
+{
+	if (this == &Game::GetLocalPlayer())
+	{
+		Game::ShowMessage(message);
 	}
 }
 
@@ -260,15 +274,21 @@ bool Player::CheckCollisions()
 		Map::SetCell(lookAheadCellX, lookAheadCellY, CellType::ChestOpened);
 		ParticleSystemManager::CreateExplosion(lookAheadX, lookAheadY, true);
 		Platform::PlaySound(Sounds::Pickup);
-		Game::ShowMessage(PSTR("Found a chest full of treasure!"));
+		ShowMessage(PSTR("Found a chest full of treasure!"));
 		Game::stats.chestsOpened++;
 		break;
 	case CellType::Sign:
-		Game::ShowMessage(SignMessage1);
+		ShowMessage(SignMessage1);
 		break;
 	}
 
 	if (IsWorldColliding())
+	{
+		return true;
+	}
+
+	Player& otherPlayer = (this == &Game::players[0] ? Game::players[1] : Game::players[0]);
+	if (IsOverlappingPoint(otherPlayer.x, otherPlayer.y))
 	{
 		return true;
 	}

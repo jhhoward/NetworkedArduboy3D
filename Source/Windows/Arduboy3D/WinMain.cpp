@@ -11,8 +11,9 @@
 #include "FixedMath.h"
 #include "MapGenerator.h"
 #include "lodepng.h"
+#include "WinNetwork.h"
 
-#define ZOOM_SCALE 1
+#define ZOOM_SCALE 4
 #define TONES_END 0x8000
 
 #include "Data_Audio.h"
@@ -28,6 +29,7 @@ uint8_t sBuffer[DISPLAY_WIDTH * DISPLAY_HEIGHT / 8];
 bool isAudioEnabled = true;
 bool IsRecording = false;
 int CurrentRecordingFrame = 0;
+bool running = true;
 
 struct KeyMap
 {
@@ -480,6 +482,12 @@ void DebugDisplayNow()
 
 int main(int argc, char* argv[])
 {
+	if (!InitNetwork())
+	{
+		printf("Error establishing network\n");
+		return 1;
+	}
+
 	SDL_Init(SDL_INIT_EVERYTHING);
 
 	SDL_CreateWindowAndRenderer(DISPLAY_WIDTH * ZOOM_SCALE, DISPLAY_HEIGHT * ZOOM_SCALE, SDL_WINDOW_RESIZABLE, &AppWindow, &AppRenderer);
@@ -493,7 +501,7 @@ int main(int argc, char* argv[])
 	);
 	ScreenTexture = SDL_CreateTexture(AppRenderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, ScreenSurface->w, ScreenSurface->h);
 
-	SDL_SetWindowPosition(AppWindow, 1900 - DISPLAY_WIDTH * 2, 1020 - DISPLAY_HEIGHT);
+	//SDL_SetWindowPosition(AppWindow, 1900 - DISPLAY_WIDTH * 2, 1020 - DISPLAY_HEIGHT);
 
 	SDL_AudioSpec wanted;
 	wanted.freq = audioSampleRate;
@@ -513,12 +521,20 @@ int main(int argc, char* argv[])
 	SeedRandom(0);
 	Game::Init();
 	
-	bool running = true;
 	int playRate = 1;
 	static int testAudio = 0;
 
+	static unsigned long tickAccum = 0;
+	unsigned long lastTimingSample = SDL_GetTicks();
+	constexpr int16_t frameDuration = 1000 / TARGET_FRAMERATE;
+	unsigned long lastGoodTick = SDL_GetTicks();
+
 	while (running)
 	{
+		unsigned long timingSample = SDL_GetTicks();
+		tickAccum += (timingSample - lastTimingSample);
+		lastTimingSample = timingSample;
+
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
 		{
@@ -572,39 +588,65 @@ int main(int argc, char* argv[])
 		SDL_SetRenderDrawColor(AppRenderer, 206, 221, 231, 255);
 		SDL_RenderClear(AppRenderer);
 
+		bool didTick = false;
+
 		for (int n = 0; n < playRate; n++)
 		{
 			memset(ScreenSurface->pixels, 0, ScreenSurface->format->BytesPerPixel * ScreenSurface->w * ScreenSurface->h);
 			
-			Game::Tick();
-			Game::Draw();
-			//Map::DebugDraw();
-			
-			ResolveScreen(ScreenSurface);
+			while (tickAccum > frameDuration)
+			{
+				if (Game::Tick())
+				{
+					didTick = true;
+					tickAccum -= frameDuration;
+					lastGoodTick = SDL_GetTicks();
+				}
+				else
+				{
+					break;
+				}
+			}
+
+			if (didTick)
+			{
+				Game::Draw();
+				ResolveScreen(ScreenSurface);
+			}
 		}
 
-		if (IsRecording)
+		if (didTick)
 		{
-			std::ostringstream filename;
-			filename << "Frame";
-			filename << std::setfill('0') << std::setw(5) << CurrentRecordingFrame << ".png";
+			if (IsRecording)
+			{
+				std::ostringstream filename;
+				filename << "Frame";
+				filename << std::setfill('0') << std::setw(5) << CurrentRecordingFrame << ".png";
 
-			lodepng::encode(filename.str(), (unsigned char*)(ScreenSurface->pixels), ScreenSurface->w, ScreenSurface->h);
-			CurrentRecordingFrame++;
+				lodepng::encode(filename.str(), (unsigned char*)(ScreenSurface->pixels), ScreenSurface->w, ScreenSurface->h);
+				CurrentRecordingFrame++;
+			}
+
+			SDL_UpdateTexture(ScreenTexture, NULL, ScreenSurface->pixels, ScreenSurface->pitch);
+			SDL_Rect src, dest;
+			src.x = src.y = dest.x = dest.y = 0;
+			src.w = DISPLAY_WIDTH;
+			src.h = DISPLAY_HEIGHT;
+			dest.w = DISPLAY_WIDTH;
+			dest.h = DISPLAY_HEIGHT;
+			SDL_RenderCopy(AppRenderer, ScreenTexture, &src, &dest);
+			SDL_RenderPresent(AppRenderer);
+
+			//SDL_Delay(1000 / TARGET_FRAMERATE);
 		}
-
-		SDL_UpdateTexture(ScreenTexture, NULL, ScreenSurface->pixels, ScreenSurface->pitch);
-		SDL_Rect src, dest;
-		src.x = src.y = dest.x = dest.y = 0;
-		src.w = DISPLAY_WIDTH;
-		src.h = DISPLAY_HEIGHT;
-		dest.w = DISPLAY_WIDTH;
-		dest.h = DISPLAY_HEIGHT;
-		SDL_RenderCopy(AppRenderer, ScreenTexture, &src, &dest);
-		SDL_RenderPresent(AppRenderer);
-
-		SDL_Delay(1000 / TARGET_FRAMERATE);
+		else if (SDL_GetTicks() - lastGoodTick > 5000)
+		{
+			running = false;
+		}
+		SDL_Delay(0);
 	}
+
+	ShutdownNetwork();
 
 	return 0;
 }
